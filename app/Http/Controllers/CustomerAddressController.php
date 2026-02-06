@@ -1,0 +1,116 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\CustomerAddress;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+
+class CustomerAddressController extends Controller
+{
+    /**
+     * Display all saved addresses
+     */
+    public function index()
+    {
+        $addresses = auth()->user()->addresses()->latest()->get();
+        
+        return Inertia::render('Customer/Addresses/Index', [
+            'addresses' => $addresses
+        ]);
+    }
+    
+    /**
+     * Store a new address
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'label' => 'nullable|string|max:50',
+            'recipient_name' => 'required|string|max:255',
+            'contact_number' => 'required|string|max:20',
+            'address_line' => 'required|string|max:500',
+            'barangay' => 'required|string|max:100',
+            'city' => 'required|string|max:100',
+            'province' => 'required|string|max:100',
+            'zip_code' => 'required|string|max:10',
+            'is_default' => 'boolean',
+        ]);
+        
+        // If setting as default, unset other defaults
+        if ($request->is_default) {
+            auth()->user()->addresses()->update(['is_default' => false]);
+        }
+        
+        $address = auth()->user()->addresses()->create($validated);
+        
+        return back()->with('success', 'Address saved successfully!');
+    }
+    
+    /**
+     * Update an existing address
+     */
+    public function update(Request $request, CustomerAddress $address)
+    {
+        // Ensure user owns this address
+        if ($address->user_id !== auth()->id()) {
+            return back()->with('error', 'Unauthorized');
+        }
+        
+        $validated = $request->validate([
+            'label' => 'nullable|string|max:50',
+            'recipient_name' => 'required|string|max:255',
+            'contact_number' => 'required|string|max:20',
+            'address_line' => 'required|string|max:500',
+            'barangay' => 'required|string|max:100',
+            'city' => 'required|string|max:100',
+            'province' => 'required|string|max:100',
+            'zip_code' => 'required|string|max:10',
+            'is_default' => 'boolean',
+        ]);
+        
+        // If setting as default, unset other defaults
+        if ($request->is_default) {
+            auth()->user()->addresses()->where('id', '!=', $address->id)
+                ->update(['is_default' => false]);
+        }
+        
+        $address->update($validated);
+        
+        return back()->with('success', 'Address updated successfully!');
+    }
+    
+    /**
+     * Set an address as default
+     */
+    public function setDefault(CustomerAddress $address)
+    {
+        // Ensure user owns this address
+        if ($address->user_id !== auth()->id()) {
+            return back()->with('error', 'Unauthorized');
+        }
+        
+        // Unset all other defaults
+        auth()->user()->addresses()->update(['is_default' => false]);
+        
+        // Set this as default
+        $address->update(['is_default' => true]);
+        
+        return back()->with('success', 'Default address updated!');
+    }
+    
+    /**
+     * Delete an address
+     */
+    public function destroy(CustomerAddress $address)
+    {
+        // Ensure user owns this address
+        if ($address->user_id !== auth()->id()) {
+            return back()->with('error', 'Unauthorized');
+        }
+        
+        $address->delete();
+        
+        return back()->with('success', 'Address deleted successfully!');
+    }
+}

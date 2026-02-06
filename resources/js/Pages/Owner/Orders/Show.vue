@@ -1,0 +1,297 @@
+<template>
+    <MainLayout>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Header -->
+            <div class="mb-8 flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Order Details</h1>
+                    <p class="text-gray-600 mt-2">{{ order.order_number }}</p>
+                </div>
+                <Link href="/owner/orders" class="text-blue-600 hover:text-blue-700 font-medium">
+                    ← Back to Orders
+                </Link>
+            </div>
+
+            <!-- Error Messages -->
+            <div v-if="$page.props.errors && Object.keys($page.props.errors).length > 0" class="mb-6 bg-red-50 border border-red-200 rounded-xl p-4">
+                <div class="flex items-start">
+                    <svg class="h-5 w-5 text-red-600 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div class="flex-1">
+                        <h3 class="text-sm font-semibold text-red-800 mb-1">Unable to update order status</h3>
+                        <ul class="text-sm text-red-700 space-y-1">
+                            <li v-for="(error, key) in $page.props.errors" :key="key">{{ error }}</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Order Details -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Order Info Card -->
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <div class="flex justify-between items-start mb-6">
+                            <div>
+                                <h2 class="text-xl font-bold text-gray-900">Order Information</h2>
+                                <p class="text-sm text-gray-600 mt-1">Placed on {{ formatDate(order.created_at) }}</p>
+                            </div>
+                            <span 
+                                :class="{
+                                    'bg-yellow-100 text-yellow-800': order.status === 'pending',
+                                    'bg-blue-100 text-blue-800': order.status === 'approved',
+                                    'bg-purple-100 text-purple-800': order.status === 'packed',
+                                    'bg-indigo-100 text-indigo-800': order.status === 'shipped',
+                                    'bg-green-100 text-green-800': order.status === 'delivered',
+                                    'bg-red-100 text-red-800': order.status === 'rejected' || order.status === 'cancelled',
+                                }"
+                                class="px-4 py-2 rounded-full text-sm font-semibold capitalize"
+                            >
+                                {{ order.status }}
+                            </span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-600">Customer</p>
+                                <p class="font-semibold text-gray-900">{{ order.customer.name }}</p>
+                                <p class="text-sm text-gray-600">{{ order.customer.email }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Contact Number</p>
+                                <p class="font-semibold text-gray-900">{{ order.contact_number }}</p>
+                            </div>
+                            <div class="col-span-2">
+                                <p class="text-sm text-gray-600">Delivery Address</p>
+                                <p class="font-semibold text-gray-900">{{ order.delivery_address }}</p>
+                            </div>
+                            <div v-if="order.notes" class="col-span-2">
+                                <p class="text-sm text-gray-600">Customer Notes</p>
+                                <p class="text-sm text-gray-700">{{ order.notes }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Order Items -->
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">Order Items</h2>
+                        
+                        <div class="space-y-4">
+                            <div 
+                                v-for="item in order.items" 
+                                :key="item.id"
+                                class="flex gap-4 pb-4 border-b last:border-0"
+                            >
+                                <div class="w-20 h-20 flex-shrink-0 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center">
+                                    <svg class="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="font-semibold text-gray-900">{{ item.product.name }}</h3>
+                                    <p class="text-sm text-gray-600">{{ item.product.brand || 'Generic' }}</p>
+                                    <p class="text-sm text-gray-500 mt-1">
+                                        Branch: {{ item.inventory.branch.location }}
+                                    </p>
+                                    <div class="flex items-center gap-4 mt-2">
+                                        <span class="text-sm text-gray-600">Qty: {{ item.quantity }}</span>
+                                        <span class="text-sm text-gray-600">₱{{ Number(item.unit_price).toLocaleString() }} each</span>
+                                        <span v-if="item.is_wholesale" class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-semibold">
+                                            Wholesale
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-bold text-gray-900">₱{{ Number(item.subtotal).toLocaleString() }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t">
+                            <div class="flex justify-between items-center">
+                                <span class="text-lg font-semibold text-gray-900">Total Amount</span>
+                                <span class="text-2xl font-bold text-blue-600">₱{{ Number(order.total_amount).toLocaleString() }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Invoice Info -->
+                    <div v-if="order.invoice" class="bg-white rounded-xl shadow-md p-6">
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">Invoice</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-600">Invoice Number</p>
+                                <p class="font-semibold text-gray-900">{{ order.invoice.invoice_number }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Status</p>
+                                <span 
+                                    :class="{
+                                        'bg-yellow-100 text-yellow-800': order.invoice.status === 'unpaid',
+                                        'bg-green-100 text-green-800': order.invoice.status === 'paid',
+                                    }"
+                                    class="inline-block px-3 py-1 rounded-full text-xs font-semibold capitalize"
+                                >
+                                    {{ order.invoice.status }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions Sidebar -->
+                <div class="lg:col-span-1">
+                    <!-- Update Status -->
+                    <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+                        <h3 class="font-bold text-gray-900 mb-4">Update Status</h3>
+                        <form @submit.prevent="updateStatus">
+                            <select 
+                                v-model="statusForm.status"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3"
+                            >
+                                <option value="pending">Pending</option>
+                                <option value="approved">Approved</option>
+                                <option value="packed">Packed</option>
+                                <option value="shipped">Shipped</option>
+                                <option value="delivered">Delivered</option>
+                                <option value="rejected">Rejected</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                            <button 
+                                type="submit"
+                                :disabled="statusForm.status === order.status || updating"
+                                class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {{ updating ? 'Updating...' : 'Update Status' }}
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Delivery Info -->
+                    <div v-if="order.delivery" class="bg-white rounded-xl shadow-md p-6 mb-6">
+                        <h3 class="font-bold text-gray-900 mb-4">Delivery</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <p class="text-sm text-gray-600">Tracking Number</p>
+                                <p class="font-semibold text-gray-900">{{ order.delivery.tracking_number }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Carrier</p>
+                                <p class="font-semibold text-gray-900">{{ order.delivery.carrier }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Status</p>
+                                <span class="inline-block bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs font-semibold capitalize">
+                                    {{ order.delivery.status.replace('_', ' ') }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-md p-6 text-white">
+                        <h3 class="font-bold mb-4">Quick Actions</h3>
+                        <div class="space-y-3">
+                            <button class="w-full bg-white/20 hover:bg-white/30 transition px-4 py-2 rounded-lg font-medium text-left">
+                                Print Invoice
+                            </button>
+                            <button class="w-full bg-white/20 hover:bg-white/30 transition px-4 py-2 rounded-lg font-medium text-left">
+                                Contact Customer
+                            </button>
+                            <Link 
+                                href="/owner/inventory"
+                                class="block w-full bg-white/20 hover:bg-white/30 transition px-4 py-2 rounded-lg font-medium text-left"
+                            >
+                                Check Inventory
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </MainLayout>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted } from 'vue';
+import { router, Link, usePage } from '@inertiajs/vue3';
+import MainLayout from '@/Layouts/MainLayout.vue';
+
+const props = defineProps({
+    order: Object,
+});
+
+const page = usePage();
+
+const statusForm = reactive({
+    status: props.order.status,
+});
+
+const updating = ref(false);
+
+onMounted(() => {
+    console.log('[OwnerOrderShow] Component mounted', {
+        order_id: props.order.id,
+        order_number: props.order.order_number,
+        current_status: props.order.status,
+        items_count: props.order.items?.length || 0
+    });
+
+    // Check for errors from previous request
+    if (page.props.errors && Object.keys(page.props.errors).length > 0) {
+        console.error('[OwnerOrderShow] Errors detected on page load', page.props.errors);
+    }
+});
+
+const updateStatus = () => {
+    const oldStatus = statusForm.status;
+    const newStatus = statusForm.status;
+
+    console.log('[OwnerOrderShow] Status update initiated', {
+        order_id: props.order.id,
+        old_status: props.order.status,
+        new_status: newStatus
+    });
+
+    // Confirm destructive actions
+    if (['rejected', 'cancelled'].includes(newStatus)) {
+        if (!confirm(`Are you sure you want to ${newStatus} this order? This will release reserved inventory.`)) {
+            console.log('[OwnerOrderShow] Status update cancelled by user');
+            return;
+        }
+    }
+
+    updating.value = true;
+    
+    router.patch(`/owner/orders/${props.order.id}/status`, statusForm, {
+        preserveScroll: true,
+        onSuccess: () => {
+            console.log('[OwnerOrderShow] Status update successful', {
+                order_id: props.order.id,
+                new_status: newStatus
+            });
+        },
+        onError: (errors) => {
+            console.error('[OwnerOrderShow] Status update failed', {
+                order_id: props.order.id,
+                errors: errors
+            });
+        },
+        onFinish: () => {
+            updating.value = false;
+            console.log('[OwnerOrderShow] Status update request completed');
+        }
+    });
+};
+
+const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
+</script>

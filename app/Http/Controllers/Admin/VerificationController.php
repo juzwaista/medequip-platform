@@ -26,7 +26,7 @@ class VerificationController extends Controller
             'status' => 'approved',
         ]);
 
-        return back()->with('success', 'Distributor approved.');
+        return back()->with('success', 'Business profile approved.');
     }
 
     public function reject(Distributor $distributor)
@@ -35,10 +35,10 @@ class VerificationController extends Controller
             'status' => 'rejected',
         ]);
 
-        return back()->with('error', 'Distributor rejected.');
+        return back()->with('error', 'Business profile rejected.');
     }
 
-        public function dashboard()
+    public function dashboard()
     {
         return view('admin.dashboard', [
             'totalDistributors' => Distributor::count(),

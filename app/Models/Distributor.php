@@ -12,20 +12,107 @@ class Distributor extends Model
     protected $fillable = [
         'user_id',
         'company_name',
+        'slug',
+        'description',
+        'logo_path',
+        'cover_photo_path',
+        'phone',
+        'website',
+        'business_hours',
+        'social_links',
         'address',
         'contact_number',
         'email',
         'is_verified',
+        'valid_id_path',
+        'business_license_path',
+        'auto_approve_orders',
     ];
 
+    protected $casts = [
+        'is_verified' => 'boolean',
+        'auto_approve_orders' => 'boolean',
+        'business_hours' => 'array',
+        'social_links' => 'array',
+    ];
+
+    /**
+     * Get the user/owner
+     */
     public function owner()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    /**
+     * Get licenses
+     */
     public function licenses()
     {
         return $this->hasMany(License::class);
     }
 
+    /**
+     * Get branches
+     */
+    public function branches()
+    {
+        return $this->hasMany(Branch::class);
+    }
+
+    /**
+     * Get products
+     */
+    public function products()
+    {
+        return $this->hasMany(Product::class);
+    }
+
+    /**
+     * Get orders received
+     */
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    /**
+     * Get DSS settings
+     */
+    public function dssSettings()
+    {
+        return $this->hasOne(DssDistributorSettings::class);
+    }
+
+    /**
+     * Get DSS alerts
+     */
+    public function dssAlerts()
+    {
+        return $this->hasMany(DssAlert::class);
+    }
+
+    /**
+     * Get sales analytics
+     */
+    public function salesAnalytics()
+    {
+        return $this->hasMany(DssSalesAnalytics::class);
+    }
+
+    /**
+     * Get reorder recommendations
+     */
+    public function reorderRecommendations()
+    {
+        return $this->hasMany(DssReorderRecommendation::class);
+    }
+
+    /**
+     * Get unread alerts count
+     */
+    public function getUnreadAlertsCountAttribute(): int
+    {
+        return $this->dssAlerts()->where('is_read', false)->count();
+    }
 }
